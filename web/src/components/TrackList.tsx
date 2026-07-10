@@ -4,6 +4,7 @@ import {
   getAudioItems,
   getJellyfinImageUrl,
 } from "../api/jellyfin";
+import { getRating, saveRating } from "../api/startune";
 import type { JellyfinAudioItem } from "../types/jellyfin";
 import { StarRating } from "./StarRating";
 
@@ -25,7 +26,9 @@ function getArtistName(item: JellyfinAudioItem): string {
   }
 
   if (item.AlbumArtists?.length) {
-    return item.AlbumArtists.map((artist) => artist.Name).join(", ");
+    return item.AlbumArtists
+      .map((artist) => artist.Name)
+      .join(", ");
   }
 
   return "Tuntematon esittäjä";
@@ -54,8 +57,12 @@ export function TrackList() {
         searchTerm: term,
       });
 
-      setTracks(result.Items ?? []);
+      const loadedTracks = result.Items ?? [];
+
+      setTracks(loadedTracks);
       setTotalCount(result.TotalRecordCount ?? 0);
+
+      await loadRatings(loadedTracks);
     } catch (error) {
       console.error("Kappaleiden hakeminen epäonnistui:", error);
 
@@ -67,6 +74,34 @@ export function TrackList() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadRatings(
+    items: JellyfinAudioItem[],
+  ): Promise<void> {
+    const results = await Promise.allSettled(
+      items.map(async (track) => {
+        const result = await getRating(track.Id);
+
+        return {
+          trackId: track.Id,
+          rating: result?.rating ?? 0,
+        };
+      }),
+    );
+
+    const loadedRatings: Record<string, number> = {};
+
+    for (const result of results) {
+      if (
+        result.status === "fulfilled"
+        && result.value.rating > 0
+      ) {
+        loadedRatings[result.value.trackId] = result.value.rating;
+      }
+    }
+
+    setRatings(loadedRatings);
   }
 
   async function handleRatingChange(
@@ -81,12 +116,15 @@ export function TrackList() {
     }));
 
     setSavingTrackId(trackId);
+    setErrorMessage("");
 
     try {
-      console.log("Tallennetaan arvio", {
-        trackId,
-        rating,
-      });
+      const savedRating = await saveRating(trackId, rating);
+
+      setRatings((currentRatings) => ({
+        ...currentRatings,
+        [trackId]: savedRating.rating,
+      }));
     } catch (error) {
       console.error("Arvion tallennus epäonnistui:", error);
 
@@ -94,12 +132,20 @@ export function TrackList() {
         ...currentRatings,
         [trackId]: previousRating,
       }));
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Arvion tallentaminen epäonnistui.",
+      );
     } finally {
       setSavingTrackId(null);
     }
   }
 
-  function handleSearch(event: FormEvent<HTMLFormElement>): void {
+  function handleSearch(
+    event: FormEvent<HTMLFormElement>,
+  ): void {
     event.preventDefault();
     void loadTracks(searchTerm);
   }
@@ -109,6 +155,7 @@ export function TrackList() {
       <div className="library-heading">
         <div>
           <h2>Musiikkikirjasto</h2>
+
           <p>
             {loading
               ? "Haetaan kappaleita…"
@@ -116,11 +163,16 @@ export function TrackList() {
           </p>
         </div>
 
-        <form className="track-search" onSubmit={handleSearch}>
+        <form
+          className="track-search"
+          onSubmit={handleSearch}
+        >
           <input
             type="search"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+            }}
             placeholder="Hae kappaletta tai esittäjää"
             aria-label="Hae musiikkikirjastosta"
           />
@@ -131,7 +183,11 @@ export function TrackList() {
         </form>
       </div>
 
-      {errorMessage && <p role="alert">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert">
+          {errorMessage}
+        </p>
+      )}
 
       {!loading && !errorMessage && tracks.length === 0 && (
         <p>Musiikkikirjastosta ei löytynyt kappaleita.</p>
@@ -146,7 +202,10 @@ export function TrackList() {
             );
 
             return (
-              <article className="track-row" key={track.Id}>
+              <article
+                className="track-row"
+                key={track.Id}
+              >
                 <div className="track-cover">
                   {imageUrl ? (
                     <img
@@ -173,7 +232,10 @@ export function TrackList() {
                     value={ratings[track.Id] ?? 0}
                     disabled={savingTrackId === track.Id}
                     onChange={(rating) => {
-                      void handleRatingChange(track.Id, rating);
+                      void handleRatingChange(
+                        track.Id,
+                        rating,
+                      );
                     }}
                   />
                 </div>

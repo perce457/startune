@@ -19,6 +19,25 @@ public sealed class JsonRatingStore : IRatingStore
         Load();
     }
 
+    public async Task<IReadOnlyList<RatingRecord>> GetAllAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        await _lock.WaitAsync(cancellationToken);
+
+        try
+        {
+            return _ratings.Values
+                .Where(record => record.UserId == userId)
+                .OrderByDescending(record => record.UpdatedAt)
+                .ToArray();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public async Task<RatingRecord?> GetAsync(
         Guid userId,
         Guid itemId,

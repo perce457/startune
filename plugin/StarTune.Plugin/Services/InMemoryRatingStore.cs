@@ -7,6 +7,20 @@ public sealed class InMemoryRatingStore : IRatingStore
 {
     private readonly ConcurrentDictionary<(Guid, Guid), RatingRecord> _ratings = new();
 
+    public Task<IReadOnlyList<RatingRecord>> GetAllAsync(
+        Guid userId,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        IReadOnlyList<RatingRecord> records = _ratings.Values
+            .Where(record => record.UserId == userId)
+            .OrderByDescending(record => record.UpdatedAt)
+            .ToArray();
+
+        return Task.FromResult(records);
+    }
+
     public Task<RatingRecord?> GetAsync(Guid userId, Guid itemId, CancellationToken ct)
     {
         _ratings.TryGetValue((userId, itemId), out var value);

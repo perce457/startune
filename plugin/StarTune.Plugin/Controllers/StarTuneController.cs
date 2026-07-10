@@ -29,6 +29,18 @@ public sealed class StarTuneController : ControllerBase
         });
     }
 
+    [HttpGet("users/{userId:guid}/ratings")]
+    public async Task<ActionResult<IReadOnlyList<RatingResponse>>> GetRatings(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var records = await _ratingStore.GetAllAsync(
+            userId,
+            cancellationToken);
+
+        return Ok(records.Select(ToResponse).ToArray());
+    }
+
     [HttpGet("users/{userId:guid}/ratings/{itemId:guid}")]
     public async Task<ActionResult<RatingResponse>> GetRating(
         Guid userId,

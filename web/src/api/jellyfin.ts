@@ -1,5 +1,7 @@
 import type {
+  JellyfinAudioItem,
   JellyfinAuthenticationResult,
+  JellyfinItemsResponse,
   JellyfinSession,
 } from "../types/jellyfin";
 
@@ -153,4 +155,72 @@ export async function jellyfinFetch(
     ...options,
     headers,
   });
+}
+
+export interface GetAudioItemsOptions {
+  startIndex?: number;
+  limit?: number;
+  searchTerm?: string;
+}
+
+export async function getAudioItems(
+  options: GetAudioItemsOptions = {},
+): Promise<JellyfinItemsResponse<JellyfinAudioItem>> {
+  const session = getStoredJellyfinSession();
+
+  if (!session) {
+    throw new Error("Jellyfin-istuntoa ei ole.");
+  }
+
+  const parameters = new URLSearchParams({
+    UserId: session.user.Id,
+    IncludeItemTypes: "Audio",
+    Recursive: "true",
+    SortBy: "SortName",
+    SortOrder: "Ascending",
+    Fields: [
+      "PrimaryImageAspectRatio",
+      "ProductionYear",
+      "Genres",
+      "MediaSources",
+    ].join(","),
+    StartIndex: String(options.startIndex ?? 0),
+    Limit: String(options.limit ?? 50),
+  });
+
+  const searchTerm = options.searchTerm?.trim();
+
+  if (searchTerm) {
+    parameters.set("SearchTerm", searchTerm);
+  }
+
+  const response = await jellyfinFetch(`/Items?${parameters.toString()}`);
+
+  if (!response.ok) {
+    throw new Error(
+      `Musiikkikirjaston hakeminen epäonnistui: HTTP ${response.status}`,
+    );
+  }
+
+  return (await response.json()) as JellyfinItemsResponse<JellyfinAudioItem>;
+}
+
+export function getJellyfinImageUrl(
+  itemId: string,
+  imageTag?: string,
+  maxWidth = 300,
+): string | null {
+  const session = getStoredJellyfinSession();
+
+  if (!session || !imageTag) {
+    return null;
+  }
+
+  const parameters = new URLSearchParams({
+    tag: imageTag,
+    maxWidth: String(maxWidth),
+    quality: "90",
+  });
+
+  return `${session.serverUrl}/Items/${itemId}/Images/Primary?${parameters.toString()}`;
 }

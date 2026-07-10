@@ -25,3 +25,33 @@ export interface JellyfinSession {
   user: JellyfinUser;
   serverId: string;
 }
+
+export interface JellyfinImageTags {
+  Primary?: string;
+  [key: string]: string | undefined;
+}
+
+export interface JellyfinAudioItem {
+  Id: string;
+  Name: string;
+  Album?: string;
+  AlbumId?: string;
+  Artists?: string[];
+  AlbumArtists?: Array<{
+    Name: string;
+    Id: string;
+  }>;
+  RunTimeTicks?: number;
+  ProductionYear?: number;
+  IndexNumber?: number;
+  ParentIndexNumber?: number;
+  ImageTags?: JellyfinImageTags;
+  PrimaryImageAspectRatio?: number;
+  Type?: string;
+}
+
+export interface JellyfinItemsResponse<T> {
+  Items: T[];
+  TotalRecordCount: number;
+  StartIndex: number;
+}

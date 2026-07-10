@@ -300,3 +300,54 @@ h2 {
     display: none;
   }
 }
+
+.star-rating {
+  display: inline-flex;
+  gap: 0.15rem;
+  align-items: center;
+}
+
+.star {
+  padding: 0.15rem;
+  color: #6b7280;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 0.2rem;
+}
+
+.star:hover:not(:disabled) {
+  color: #facc15;
+  background: transparent;
+  transform: scale(1.1);
+}
+
+.star.active {
+  color: #facc15;
+}
+
+.star:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.track-row {
+  grid-template-columns:
+    54px
+    minmax(180px, 1.5fr)
+    minmax(150px, 1fr)
+    minmax(130px, auto)
+    60px;
+}
+
+@media (max-width: 720px) {
+  .track-row {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+
+  .track-album,
+  .track-runtime {
+    display: none;
+  }
+}

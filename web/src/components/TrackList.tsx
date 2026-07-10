@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import {
   getAudioItems,
   getJellyfinImageUrl,
 } from "../api/jellyfin";
 import type { JellyfinAudioItem } from "../types/jellyfin";
+import { StarRating } from "./StarRating";
 
 function formatRuntime(runTimeTicks?: number): string {
   if (!runTimeTicks) {
@@ -35,6 +37,8 @@ export function TrackList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [savingTrackId, setSavingTrackId] = useState<string | null>(null);
 
   useEffect(() => {
     void loadTracks();
@@ -50,8 +54,8 @@ export function TrackList() {
         searchTerm: term,
       });
 
-      setTracks(result.Items);
-      setTotalCount(result.TotalRecordCount);
+      setTracks(result.Items ?? []);
+      setTotalCount(result.TotalRecordCount ?? 0);
     } catch (error) {
       console.error("Kappaleiden hakeminen epäonnistui:", error);
 
@@ -65,7 +69,37 @@ export function TrackList() {
     }
   }
 
-  function handleSearch(event: React.FormEvent<HTMLFormElement>): void {
+  async function handleRatingChange(
+    trackId: string,
+    rating: number,
+  ): Promise<void> {
+    const previousRating = ratings[trackId] ?? 0;
+
+    setRatings((currentRatings) => ({
+      ...currentRatings,
+      [trackId]: rating,
+    }));
+
+    setSavingTrackId(trackId);
+
+    try {
+      console.log("Tallennetaan arvio", {
+        trackId,
+        rating,
+      });
+    } catch (error) {
+      console.error("Arvion tallennus epäonnistui:", error);
+
+      setRatings((currentRatings) => ({
+        ...currentRatings,
+        [trackId]: previousRating,
+      }));
+    } finally {
+      setSavingTrackId(null);
+    }
+  }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     void loadTracks(searchTerm);
   }
@@ -97,11 +131,7 @@ export function TrackList() {
         </form>
       </div>
 
-      {errorMessage && (
-        <p role="alert">
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <p role="alert">{errorMessage}</p>}
 
       {!loading && !errorMessage && tracks.length === 0 && (
         <p>Musiikkikirjastosta ei löytynyt kappaleita.</p>
@@ -136,6 +166,16 @@ export function TrackList() {
 
                 <div className="track-album">
                   {track.Album ?? "Tuntematon albumi"}
+                </div>
+
+                <div className="track-rating">
+                  <StarRating
+                    value={ratings[track.Id] ?? 0}
+                    disabled={savingTrackId === track.Id}
+                    onChange={(rating) => {
+                      void handleRatingChange(track.Id, rating);
+                    }}
+                  />
                 </div>
 
                 <div className="track-runtime">

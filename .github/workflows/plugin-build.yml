@@ -1,0 +1,40 @@
+name: Plugin build
+
+on:
+  push:
+    branches: [main, "feature/**"]
+    paths:
+      - "plugin/**"
+      - ".github/workflows/plugin-build.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "plugin/**"
+      - ".github/workflows/plugin-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: plugin/StarTune.Plugin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - run: dotnet restore
+      - run: dotnet build --configuration Release --no-restore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: startune-plugin
+          path: plugin/StarTune.Plugin/bin/Release/net9.0/StarTune.Plugin.dll
+          if-no-files-found: error

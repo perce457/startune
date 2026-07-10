@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest a StarTune improvement.
+title: "[Feature]: "
+labels: [enhancement]
+
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Area
+      options:
+        - Ratings
+        - Smart playlists
+        - Music library browser
+        - Jellyfin integration
+        - User interface
+        - Packaging and distribution
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or need
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true

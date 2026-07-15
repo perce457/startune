@@ -4,7 +4,7 @@ import {
   getAudioItems,
   getJellyfinImageUrl,
 } from "../api/jellyfin";
-import { getRating, saveRating } from "../api/startune";
+import { getRatings, saveRating } from "../api/startune";
 import type { JellyfinAudioItem } from "../types/jellyfin";
 import { StarRating } from "./StarRating";
 
@@ -62,7 +62,7 @@ export function TrackList() {
       setTracks(loadedTracks);
       setTotalCount(result.TotalRecordCount ?? 0);
 
-      await loadRatings(loadedTracks);
+      await loadRatings();
     } catch (error) {
       console.error("Kappaleiden hakeminen epäonnistui:", error);
 
@@ -76,29 +76,12 @@ export function TrackList() {
     }
   }
 
-  async function loadRatings(
-    items: JellyfinAudioItem[],
-  ): Promise<void> {
-    const results = await Promise.allSettled(
-      items.map(async (track) => {
-        const result = await getRating(track.Id);
-
-        return {
-          trackId: track.Id,
-          rating: result?.rating ?? 0,
-        };
-      }),
-    );
-
+  async function loadRatings(): Promise<void> {
+    const results = await getRatings();
     const loadedRatings: Record<string, number> = {};
 
     for (const result of results) {
-      if (
-        result.status === "fulfilled"
-        && result.value.rating > 0
-      ) {
-        loadedRatings[result.value.trackId] = result.value.rating;
-      }
+      loadedRatings[result.itemId] = result.rating;
     }
 
     setRatings(loadedRatings);

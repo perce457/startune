@@ -5,7 +5,10 @@ import {
   getStoredJellyfinSession,
   jellyfinFetch,
 } from "./api/jellyfin";
-import { getStarTuneHealth } from "./api/startune";
+import {
+  getRatings,
+  getStarTuneHealth,
+} from "./api/startune";
 import { LoginPage } from "./pages/LoginPage";
 import type { JellyfinSession, JellyfinUser } from "./types/jellyfin";
 
@@ -16,6 +19,8 @@ function App() {
   const [session, setSession] = useState<JellyfinSession | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [pluginStatusMessage, setPluginStatusMessage] = useState("");
+  const [developerStatusMessage, setDeveloperStatusMessage] = useState("");
+  const [testingDeveloperApis, setTestingDeveloperApis] = useState(false);
 
   useEffect(() => {
     void restoreSession();
@@ -63,6 +68,7 @@ function App() {
     setAppState("logged-in");
     setStatusMessage("");
     setPluginStatusMessage("");
+    setDeveloperStatusMessage("");
   }
 
   function handleLogout(): void {
@@ -70,6 +76,7 @@ function App() {
     setSession(null);
     setStatusMessage("");
     setPluginStatusMessage("");
+    setDeveloperStatusMessage("");
     setAppState("logged-out");
   }
 
@@ -131,6 +138,37 @@ function App() {
           ? error.message
           : "StarTune-pluginin yhteystesti epäonnistui.",
       );
+    }
+  }
+
+  async function testDeveloperApis(): Promise<void> {
+    setTestingDeveloperApis(true);
+    setDeveloperStatusMessage("Testataan StarTune API -rajapintoja…");
+
+    try {
+      const [health, ratings] = await Promise.all([
+        getStarTuneHealth(),
+        getRatings(),
+      ]);
+
+      const status =
+        typeof health.status === "string"
+          ? health.status
+          : "ok";
+
+      setDeveloperStatusMessage(
+        `Testi onnistui. Health: ${status}. Arvioita: ${ratings.length}.`,
+      );
+    } catch (error) {
+      console.error("StarTune API -testi epäonnistui:", error);
+
+      setDeveloperStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "StarTune API -testi epäonnistui.",
+      );
+    } finally {
+      setTestingDeveloperApis(false);
     }
   }
 
@@ -227,6 +265,29 @@ function App() {
           {pluginStatusMessage && (
             <p className="status-message" role="status">
               {pluginStatusMessage}
+            </p>
+          )}
+        </article>
+        <article className="card">
+          <h2>Kehittäjätyökalut</h2>
+
+          <p>
+            Testaa StarTune-pluginin health- ja rating-listausrajapinnat.
+          </p>
+
+          <button
+            type="button"
+            disabled={testingDeveloperApis}
+            onClick={() => void testDeveloperApis()}
+          >
+            {testingDeveloperApis
+              ? "Testataan…"
+              : "Testaa StarTune API:t"}
+          </button>
+
+          {developerStatusMessage && (
+            <p className="status-message" role="status">
+              {developerStatusMessage}
             </p>
           )}
         </article>

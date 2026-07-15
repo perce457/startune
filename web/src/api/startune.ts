@@ -77,6 +77,31 @@ export async function getStarTuneHealth(): Promise<StarTuneHealthResponse> {
   return (await response.json()) as StarTuneHealthResponse;
 }
 
+export async function getRatings(): Promise<StarTuneRating[]> {
+  const userId = getCurrentUserId();
+
+  const response = await jellyfinFetch(
+    `/StarTune/users/${encodeURIComponent(userId)}/ratings`,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Arvioiden listaus epäonnistui: HTTP ${response.status}`,
+    );
+  }
+
+  const results =
+    (await response.json()) as StarTuneRatingApiResponse[];
+
+  if (!Array.isArray(results)) {
+    throw new Error(
+      "StarTune-plugin palautti virheellisen arviointilistan.",
+    );
+  }
+
+  return results.map(normalizeRatingResponse);
+}
+
 export async function getRating(
   itemId: string,
 ): Promise<StarTuneRating | null> {
